@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DNI</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#ffffff;--accent:#0b74de;--muted:#6b7280;--success:#16a34a;--danger:#ef4444}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg,#f7fbff 0%,var(--bg) 100%);color:#0f172a}
+    .container{max-width:980px;margin:48px auto;padding:24px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#5cc8ff);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:6px 0 0;color:var(--muted);font-size:14px}
+
+    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 6px 18px rgba(12,20,40,0.06)}
+    form{display:flex;gap:12px;align-items:center}
+    .input-wrap{flex:1}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e6e9ef;font-size:15px}
+    .actions{display:flex;gap:8px}
+    button{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+    button.secondary{background:#eef4ff;color:var(--accent);border:1px solid rgba(11,116,222,0.12)}
+    button:disabled{opacity:0.6;cursor:not-allowed}
+
+    .result{margin-top:18px;display:grid;grid-template-columns:1fr 320px;gap:16px}
+    .info{padding:12px;border-radius:10px;border:1px solid #eef2f7;background:linear-gradient(180deg,rgba(255,255,255,0.6),transparent)}
+    .info h2{margin:0 0 6px;font-size:16px}
+    .field{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #eef2f7}
+    .field:last-child{border-bottom:0}
+    .muted{color:var(--muted);font-size:13px}
+
+    .side{padding:12px;border-radius:10px;border:1px solid #eef2f7;background:#fff}
+    .badge{display:inline-block;padding:6px 8px;border-radius:999px;font-weight:700}
+    .ok{background:rgba(22,163,74,0.12);color:var(--success)}
+    .err{background:rgba(239,68,68,0.08);color:var(--danger)}
+
+    .small{font-size:13px;color:var(--muted)}
+    .loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.9);border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+
+    @media (max-width:860px){.result{grid-template-columns:1fr}.side{order:2}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">DNI</div>
+      <div>
+        <h1>CONSULTAS POR DNI - PERU</h1>
+        <p class="lead">Consulta nombres, apellidos, género, fecha de nacimiento y código de verificación usando la API pública.</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <form id="dniForm" aria-label="Formulario consulta DNI" onsubmit="return false;">
+        <div class="input-wrap">
+          <label for="dniInput">Número de DNI</label>
+          <input id="dniInput" name="document" type="text" inputmode="numeric" placeholder="Ej: 12345678" maxlength="8" autocomplete="off" />
+        </div>
+        <div class="actions">
+          <button id="searchBtn" type="button">Consultar</button>
+          <button id="clearBtn" class="secondary" type="button">Limpiar</button>
+        </div>
+      </form>
+
+      <div id="output" class="result" style="display:none;">
+        <div class="info card-left">
+          <h2 id="fullName">—</h2>
+          <div class="field"><div class="muted">Nombres</div><div id="nombres">—</div></div>
+          <div class="field"><div class="muted">Apellido paterno</div><div id="ap_paterno">—</div></div>
+          <div class="field"><div class="muted">Apellido materno</div><div id="ap_materno">—</div></div>
+          <div class="field"><div class="muted">Género</div><div id="genero">—</div></div>
+          <div class="field"><div class="muted">Fecha de nacimiento</div><div id="fnac">—</div></div>
+          <div class="field"><div class="muted">Código verificación</div><div id="codver">—</div></div>
+        </div>
+
+        <aside class="side">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+            <div>
+              <div class="small">Estado</div>
+              <div id="statusLabel"><span class="badge err">Sin consultar</span></div>
+            </div>
+            <div>
+              <button id="copyBtn" class="secondary" type="button">Copiar JSON</button>
+            </div>
+          </div>
+
+          <div class="small">Respuesta cruda</div>
+          <pre id="raw" style="white-space:pre-wrap;background:#fbfdff;padding:10px;border-radius:8px;margin-top:8px;max-height:220px;overflow:auto;border:1px solid #f0f6ff">—</pre>
+
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button id="downloadBtn" class="secondary" type="button">Descargar JSON</button>
+            <button id="printBtn" class="secondary" type="button">Imprimir</button>
+          </div>
+        </aside>
+      </div>
+
+      <div id="helper" style="margin-top:14px;color:var(--muted);font-size:14px">Key incorporada para demo. <strong>Eliminar el token del código en producción.</strong></div>
+
+    </div>
+
+    <footer>
+      Hecho con ❤️ — https://storedigitaleth.netlify.app/
+    </footer>
+  </div>
+
+  <script>
+    // Token incluido según lo proporcionado por el usuario (para demo). Reemplazar o eliminar en producción.
+    const API_KEY = 'cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjhkYzAwNjE3NzAwMmUxM2U0NzI4YjA4';
+    const BASE = 'https://api.perudevs.com/api/v1/dni/complete';
+
+    const dniInput = document.getElementById('dniInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const output = document.getElementById('output');
+    const raw = document.getElementById('raw');
+    const statusLabel = document.getElementById('statusLabel');
+    const fullName = document.getElementById('fullName');
+    const nombres = document.getElementById('nombres');
+    const apP = document.getElementById('ap_paterno');
+    const apM = document.getElementById('ap_materno');
+    const genero = document.getElementById('genero');
+    const fnac = document.getElementById('fnac');
+    const codver = document.getElementById('codver');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const printBtn = document.getElementById('printBtn');
+    const helper = document.getElementById('helper');
+
+    function setLoading(on){
+      if(on){
+        searchBtn.disabled=true; searchBtn.innerHTML = '<span class="loader" aria-hidden="true"></span> Consultando';
+        statusLabel.innerHTML = '<span class="badge err">Consultando...</span>';
+      } else {
+        searchBtn.disabled=false; searchBtn.textContent='Consultar';
+      }
+    }
+
+    function showError(msg){
+      output.style.display='block';
+      statusLabel.innerHTML = '<span class="badge err">Error</span>';
+      raw.textContent = msg;
+      fullName.textContent = '—'; nombres.textContent='—'; apP.textContent='—'; apM.textContent='—'; genero.textContent='—'; fnac.textContent='—'; codver.textContent='—';
+    }
+
+    function validateDNI(val){
+      return /^\d{8}$/.test(val);
+    }
+
+    async function consultar(){
+      const doc = dniInput.value.trim();
+      if(!validateDNI(doc)){
+        alert('Ingrese un número de DNI válido de 8 dígitos.');
+        dniInput.focus();
+        return;
+      }
+
+      setLoading(true);
+      try{
+        const url = `${BASE}?document=${encodeURIComponent(doc)}&key=${encodeURIComponent(API_KEY)}`;
+        const resp = await fetch(url, { method: 'GET' });
+        const data = await resp.json();
+
+        raw.textContent = JSON.stringify(data, null, 2);
+        if(!resp.ok){
+          showError('HTTP ' + resp.status + ' — ' + (data.message || resp.statusText));
+          return;
+        }
+
+        if(data.estado === true || (data.estado && data.estado === true) || data.resultado){
+          // API returned success
+          const r = data.resultado || data;
+          fullName.textContent = r.nombre_completo || ( (r.nombres||'') + ' ' + (r.apellido_paterno||'') + ' ' + (r.apellido_materno||'') ).trim();
+          nombres.textContent = r.nombres || '—';
+          apP.textContent = r.apellido_paterno || '—';
+          apM.textContent = r.apellido_materno || '—';
+          genero.textContent = r.genero || '—';
+          fnac.textContent = r.fecha_nacimiento || '—';
+          codver.textContent = r.codigo_verificacion || '—';
+
+          statusLabel.innerHTML = '<span class="badge ok">Encontrado</span>';
+          output.style.display='grid';
+        } else {
+          showError(data.mensaje || 'No se encontró información');
+        }
+      } catch(err){
+        showError(String(err));
+      } finally{
+        setLoading(false);
+      }
+    }
+
+    searchBtn.addEventListener('click', consultar);
+    dniInput.addEventListener('keypress', (e)=>{ if(e.key === 'Enter') consultar(); });
+    clearBtn.addEventListener('click', ()=>{
+      dniInput.value=''; output.style.display='none'; raw.textContent='—'; statusLabel.innerHTML='<span class="badge err">Sin consultar</span>';
+    });
+
+    copyBtn.addEventListener('click', ()=>{
+      const text = raw.textContent || '';
+      if(!text || text==='—') return alert('No hay respuesta para copiar');
+      navigator.clipboard.writeText(text).then(()=>alert('JSON copiado al portapapeles'))
+      .catch(()=>alert('No se pudo copiar.'));
+    });
+
+    downloadBtn.addEventListener('click', ()=>{
+      const text = raw.textContent || '';
+      if(!text || text==='—') return alert('No hay respuesta para descargar');
+      const blob = new Blob([text], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `dni-${dniInput.value || 'result'}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    printBtn.addEventListener('click', ()=>{
+      const w = window.open('', '_blank');
+      w.document.write(`<pre>${raw.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</pre>`);
+      w.document.close();
+      w.focus();
+      w.print();
+    });
+
+    // Initialize UI
+    statusLabel.innerHTML = '<span class="badge err">Sin consultar</span>';
+    raw.textContent = '—';
+  </script>
+</body>
+</html>
